@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <future>
@@ -13,15 +12,7 @@ int square(int x)
 	return x*x;
 }
 
-static size_t my_write(void* buffer, size_t size, size_t nmemb, void* param)
-{
-	std::string& text = *static_cast<std::string*>(param);
-	size_t totalsize = size * nmemb;
-	text.append(static_cast<char*>(buffer), totalsize);
-	return totalsize;
-}
-
-void readFile(const char* filename, std::list<std::string>& lines)
+void writeFile(const char* filename, std::list<std::string>& lines)
 {
 	lines.clear();
 	std::ifstream file(filename);
@@ -32,52 +23,48 @@ void readFile(const char* filename, std::list<std::string>& lines)
 	}
 }
 
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
 void curl_test(std::string uri)
 {
-	std::string result;
-	CURL* curl;
-	CURLcode res;
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-	curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, my_write);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-		if (CURLE_OK != res) {
-		std::cerr << "CURL error: " << res << '\n';
-		}
-	}
-	curl_global_cleanup();
-	std::cout << result << "\n\n";
+  CURL *curl;
+  CURLcode res;
+  std::string readBuffer;
 
+  curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    std::cout << readBuffer << std::endl;
+  }
 }
 
 void curl_test(toml::value<std::string> uri)
 {
-	std::string result;
+  CURL *curl;
+  CURLcode res;
+  std::string readBuffer;
 	std::string uri_formated = uri->c_str();
-	CURL* curl;
-	CURLcode res;
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-	curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, uri_formated.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, my_write);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-		if (CURLE_OK != res) {
-		std::cerr << "CURL error: " << res << '\n';
-		}
-	}
-	curl_global_cleanup();
-	std::cout << result << "\n\n";
+  curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, uri_formated.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
 
+    std::cout << readBuffer << std::endl;
+  }
 }
+
 toml::parse_result get_toml_data()
 {
     return toml::parse_file("./raw_lists.toml");
@@ -129,10 +116,12 @@ int main (int argc, char *argv[]) {
 	std::cout << "result is: " << result_1 << std::endl;
 
 	// from where will be curl
-
 	std::string test_url = "https://www.benmi.me/test.txt";
 	curl_test(test_url);
-    toml_items();
+	// toml paring and looping
+    //toml_items();
+	// ------------------- Restructure
+	
 	return 0;
 }
 
