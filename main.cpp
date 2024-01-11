@@ -12,7 +12,7 @@ int square(int x)
 	return x*x;
 }
 
-void writeFile(const char* filename, std::list<std::string>& lines)
+void write_file(const char* filename, std::list<std::string>& lines)
 {
 	lines.clear();
 	std::ifstream file(filename);
@@ -23,7 +23,7 @@ void writeFile(const char* filename, std::list<std::string>& lines)
 	}
 }
 
-static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
@@ -31,38 +31,38 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 
 void curl_test(std::string uri)
 {
-  CURL *curl;
-  CURLcode res;
-  std::string readBuffer;
+	CURL *curl;
+	CURLcode res;
+	std::string readBuffer;
 
-  curl = curl_easy_init();
-  if(curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-    res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
+	curl = curl_easy_init();
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
 
-    std::cout << readBuffer << std::endl;
-  }
+		std::cout << readBuffer << std::endl;
+	}
 }
 
 void curl_test(toml::value<std::string> uri)
 {
-  CURL *curl;
-  CURLcode res;
-  std::string readBuffer;
+	CURL *curl;
+	CURLcode res;
+	std::string readBuffer;
 	std::string uri_formated = uri->c_str();
-  curl = curl_easy_init();
-  if(curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, uri_formated.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-    res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
+	curl = curl_easy_init();
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, uri_formated.c_str());
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
 
-    std::cout << readBuffer << std::endl;
-  }
+		std::cout << readBuffer << std::endl;
+	}
 }
 
 toml::parse_result get_toml_data()
@@ -70,7 +70,7 @@ toml::parse_result get_toml_data()
     return toml::parse_file("./raw_lists.toml");
 }
 
-void iterateArray(const toml::array& arr) {
+void iterate_array(const toml::array& arr) {
     for (const auto& item : arr) {
         // Assuming the array contains integers, change the type accordingly
         if (auto str_value = item.as_string(); str_value) {
@@ -93,7 +93,7 @@ int toml_items()
 
     // Check if 'yourArray' is an array
     if (const auto array_ptr = yourArray; array_ptr) {
-        iterateArray(*array_ptr);
+        iterate_array(*array_ptr);
     } else {
         std::cerr << "Error: 'your_array' is not an array!" << std::endl;
     }
