@@ -1,6 +1,5 @@
-# pihole_list_sorter_in_cpp
+# dns_list_sorter
 
-pihole_list_sorter_in_cpp
 
 ```sh
 curl-config --libs
@@ -12,5 +11,5 @@ Should respons something like
 
 
 ```sh
-g++ main.cpp -lcurl 
+g++ main.cpp -lcurl -o dns_list_sorter
 ```
