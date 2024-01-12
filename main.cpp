@@ -1,17 +1,25 @@
 #include <iostream>
 #include <fstream>
 #include <future>
-#include <map>
+#include <iterator>
 #include <ostream>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <algorithm>
+#include <set>
 #include "curl/curl.h"
 #include "tomlplusplus/toml.hpp"
-using namespace std::string_view_literals;
+// ----------------------------------------- Globals
+std::vector<std::string> white_list;
+std::vector<std::string> full_list;
+// ----------------------------------------- Globals
 
-int square(int x)
+std::vector<std::string> combine_lists(std::vector<std::string> v, std::vector<std::string> v_append)
 {
-	return x*x;
+	v.reserve(v.size() + distance(v_append.begin(),v_append.end()));
+	v.insert(v.end(), v_append.begin(),v_append.end());
+	return v;
 }
 
 void write_file(const char* filename, std::vector<std::string>& lines)
@@ -31,7 +39,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return size * nmemb;
 }
 
-void curl_test(std::string uri)
+std::string curl_test(std::string uri)
 {
 	CURL *curl;
 	CURLcode res;
@@ -45,13 +53,9 @@ void curl_test(std::string uri)
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 
-		std::cout << readBuffer << std::endl;
+		//std::cout << readBuffer << std::endl;
 	}
-}
-
-toml::parse_result get_toml_data()
-{
-    return toml::parse_file("./raw_lists.toml");
+	return readBuffer;
 }
 
 std::string toml_value_to_string(toml::value<std::string> uri)
@@ -60,109 +64,183 @@ std::string toml_value_to_string(toml::value<std::string> uri)
 	return thing_formated;
 }
 
-void iterate_array(const toml::array& arr, std::string category, std::map<std::string, std::vector<std::string>> list_map) {
-    for (const auto& item : arr) {
-        // Assuming the array contains integers, change the type accordingly
-		if (auto str_value = item.as_string(); str_value) {
-			std::string real_string = toml_value_to_string(*str_value);
-            std::cout << real_string << std::endl;
-			//curl_test(real_string);
-			list_map[category].push_back(real_string);
-        } else {
-            std::cerr << "Error: Array item is not an integer!" << std::endl;
-        }
-    }
+std::string clean_up_string(std::string input)
+{
+	std::string check_array[2] = {"127.0.0.1", "0.0.0.0"};
+	for (std::string unneeded_string : check_array) {
+		if (input.compare(0, unneeded_string.length(), unneeded_string) == 0) {
+			// Find the position of the first non-whitespace character after "unneeded_string"
+			size_t startPos = input.find_first_not_of(" \t", unneeded_string.length());
+
+			// Remove the "unneeded_string" part and any spaces if found
+			if (startPos != std::string::npos) {
+				input = input.substr(startPos);
+			} else {
+				input = input.substr(unneeded_string.length()); // If no non-whitespace character found after "unneeded_string", set the string to empty
+			}
+		} 
+	}
+
+	char illegalChar[2] = {'^', '|'};
+
+	for (char bad_char: illegalChar) {
+		input.erase(std::remove(input.begin(), input.end(), bad_char), input.end());
+	}
+
+	//std::cout << input << std::endl;
+	return input;
 }
 
-int toml_read_and_sort(toml::table tbl, std::string category, std::map<std::string, std::vector<std::string>> list_map) 
+bool check_white_list(std::string item)
 {
-    // get a toml::node_view of the element '' using operator[]
-    auto numbers = tbl[category]["links"];
+	// The only problem here is that if the link is
+	// f.eks www.google.com,
+	// and the white_filter has google.com in it, 
+	// it will return false
+	//! This might be thing to add later
+	if ( std::find(white_list.begin(), white_list.end(), item) != white_list.end() ) {
+		// if the item is in the whitelist
+		if ( std::find(full_list.begin(), full_list.end(), item) != full_list.end() ){
+			return true;
+		}
+		return true;
+	}
+	// else return false
+	return false;
+}
 
-    const auto& yourArray = numbers.as_array();
+std::vector<std::string> split_string_to_list(const std::string& str)
+{
+    auto result = std::vector<std::string>{};
+    auto ss = std::stringstream{str};
+
+    for (std::string line; std::getline(ss, line, '\n');){
+		// Skip the string if it starts with "#"
+		// As there is no need for comments
+		if (line.rfind("#", 0) != 0) {
+			std::string clean_uri = clean_up_string(line);
+			// if the item is not in the list_filter
+			if (!check_white_list(clean_uri)) {
+				// add the item
+				result.push_back(clean_uri);
+			}
+		}
+		//std::cout << line << std::endl;
+	}
+    return result;
+}
+
+ std::vector<std::string> iterate_array(const toml::array& arr, std::string category) {
+	std::vector<std::string> v;
+	for (const auto& item : arr)
+	{
+		// Assuming the array contains integers, change the type accordingly
+		if (auto str_value = item.as_string(); str_value) {
+			std::string real_string = toml_value_to_string(*str_value);
+			std::string curl_result = curl_test(real_string);
+			std::vector<std::string> v_append = split_string_to_list(curl_result);
+		
+			for (const auto& i : v_append) {
+				if (i.rfind("|", 0) == 0) {
+					// if the item is not in the list_filter
+					std::cout << *str_value << std::endl;
+					std::cout << "Iteration: " << i << std::endl;
+				}
+			}
+			v = combine_lists(v, v_append);
+		} else {
+			std::cerr << "Error: Array item is not an integer!" << std::endl;
+		}
+	}
+	return v;
+}
+
+std::vector<std::string> remove_duplicates(std::vector<std::string> v)
+{
+	//std::set<std::string> string_set;
+	//unsigned size = v.size();
+	//for( unsigned i = 0; i < size; ++i ) string_set.insert( v[i] );
+	//v.assign( string_set.begin(), string_set.end() );
+	//
+	sort( v.begin(), v.end() );
+	v.erase( unique( v.begin(), v.end() ), v.end() );
+
+	return v;
+}
+
+std::vector<std::string> toml_read_and_sort(toml::table tbl, std::string category) 
+{
+	std::vector<std::string> v; // full vector
+	// ---------------------------------------------------------------------
+    // get a toml::node_view of the element 'category' using operator[]
+    auto category_links = tbl[category]["links"];
+
+    const auto& category_links_array = category_links.as_array();
 
     // Check if 'yourArray' is an array
-    if (const auto array_ptr = yourArray; array_ptr) {
-        iterate_array(*array_ptr, category, list_map);
-
+    if (const auto array_item = category_links_array; array_item) {
+        std::vector<std::string> v_append = iterate_array(*array_item, category);
+		v = combine_lists(v, v_append);
     } else {
         std::cerr << "Error: 'your_array' is not an array!" << std::endl;
     }
-	return 0;
+	std::vector<std::string> sorted_v = remove_duplicates(v);
+	return sorted_v;
+}
+
+toml::parse_result get_toml_data()
+{
+    return toml::parse_file("./raw_lists.toml");
+}
+
+std::vector<std::string> update_white_list()
+{
+	std::vector<std::string> v_append = {"google.com", "www.google.com"};
+	combine_lists(white_list, v_append);
+	return white_list;
 }
 
 int main (int argc, char *argv[])
 {
-	// Example on simple async function and waiting	
-	std::future<int> asyncFunction = std::async(&square,12);
-	for(int i=0; i< 10; i++){
-		std::cout << square(i) << std::endl;
-	}
-
-	// We are blocked at the 'get()' operation, until our
-	// result has computed
-	int result_1 = asyncFunction.get();
-
-	std::cout << "result is: " << result_1 << std::endl;
-
-	// from where will be curl
-	std::string test_url = "https://www.benmi.me/test.txt";
-	curl_test(test_url);
-	// toml paring and looping
-    //toml_items();
-	// ------------------- Restructure
-	//Small test
-	std::map<std::string, std::vector<std::string>> list_map;
-	// =================
+	white_list = update_white_list();
+	/*
+	// for testing
+	std::string test = clean_up_string("127.0.0.1 0.0.0.0 www.google.com");
+	std::cout << test << std::endl;
+	*/
+	// Start with geting the raw data from toml
 	toml::table tbl = get_toml_data();
-
-	std::string arr[5] = {"Suspicious", "Advertising", "Tracking", "Malicious", "Other"};
-	std::vector<std::future<int>> get_lists;
-
-	std::cout << "Start loop---------" << std::endl;
-
-	for (const auto& item : arr) {
-		std::cout << item << std::endl;
-		get_lists.push_back(std::async(&toml_read_and_sort, tbl, item, list_map));
-    }
-
+	std::cout << "Start gathering---------" << std::endl;
+	// Go through each main cateory
+	// collecting the data from the links
+	
+	std::future<std::vector<std::string>> get_sus = std::async(&toml_read_and_sort, tbl, "Suspicious");
+	std::future<std::vector<std::string>> get_ads = std::async(&toml_read_and_sort, tbl, "Advertising");
+	std::future<std::vector<std::string>> get_trc = std::async(&toml_read_and_sort, tbl, "Tracking");
+	std::future<std::vector<std::string>> get_mal = std::async(&toml_read_and_sort, tbl, "Malicious");
+	std::future<std::vector<std::string>> get_etc = std::async(&toml_read_and_sort, tbl, "Other");
+	// Wait for the result
 	std::cout << "Waiting" << std::endl;
-    
-	for (auto& task : get_lists) {
-        task.wait();
-    }
-	
+	std::vector<std::string> result_sus = get_sus.get();
+	std::vector<std::string> result_ads = get_ads.get();
+	std::vector<std::string> result_trc = get_trc.get();
+	std::vector<std::string> result_mal = get_mal.get();
+	std::vector<std::string> result_etc = get_etc.get();
+
 	std::cout << "I waited, now its finished" << std::endl;
+
+	full_list = combine_lists(full_list, result_sus);
+	full_list = combine_lists(full_list, result_ads);
+	full_list = combine_lists(full_list, result_trc);
+	full_list = combine_lists(full_list, result_mal);
+	full_list = combine_lists(full_list, result_etc);
+
+	remove_duplicates(full_list);
+
+	for (auto i = full_list.begin(); i != full_list.end(); ++i) {
+		std::cout << "Iteration: " << *i << std::endl;
+	}
 	
-	for (const std::string& item : arr)
-	{
-		std::cout << item << std::endl;
-		//std::cout << list_map["Suspicious"] << std::endl;
-		for (const auto& item: list_map[item])
-		{
-			std::cout << item << std::endl;
-		}
-    }
-	std::cout << "---start" << std::endl;
-	for(std::map<std::string, std::vector<std::string>> ::const_iterator it = list_map.begin();  it != list_map.end(); ++it)
-	{
-		std::cout << it->first << ": ";
-		for (std::vector<std::string>::const_iterator b = it->second.begin(); b != it->second.end() ;++it)
-		{
-			std::cout << *b;
-		}
-		std::cout << std::endl;
-	}
-	std::cout << "----end" << std::endl;
-	for(std::map<std::string, std::vector<std::string>> ::const_iterator it = list_map.begin();  it != list_map.end(); ++it)
-	{
-		std::cout << it->first << ": ";
-		for (std::vector<std::string>::const_iterator b = it->second.begin(); b != it->second.end() ;++it)
-		{
-			std::cout << *b;
-		}
-		std::cout << std::endl;
-	}
 	return 0;
 }
 
