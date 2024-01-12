@@ -1,3 +1,8 @@
+[Whitelist]
+links = ["https://git.benmi.me/benmi/whitelist/raw/branch/master/domains/whitelist.txt",
+ "https://git.benmi.me/benmi/whitelist/raw/branch/master/domains/referral-sites.txt",
+ "https://git.benmi.me/benmi/whitelist/raw/branch/master/domains/optional-list.txt"]
+
 [Suspicious]
 links = ["https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt",
  "https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts",

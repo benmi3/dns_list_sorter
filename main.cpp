@@ -7,7 +7,6 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-#include <set>
 #include "curl/curl.h"
 #include "tomlplusplus/toml.hpp"
 // ----------------------------------------- Globals
@@ -22,16 +21,22 @@ std::vector<std::string> combine_lists(std::vector<std::string> v, std::vector<s
 	return v;
 }
 
-void write_file(const char* filename, std::vector<std::string>& lines)
-{
-	lines.clear();
-	std::ifstream file(filename);
-	std::string s;
-	while (getline(file, s))
-	{
-		lines.push_back(s);
-	}
+int write_vector_to_file(const std::vector<std::string>& data, const std::string& filename) {
+    std::ofstream outputFile(filename);
+
+    if (outputFile.is_open()) {
+        for (const auto& line : data) {
+            outputFile << line << std::endl;
+        }
+
+        outputFile.close();
+        std::cout << "Vector contents successfully written to " << filename << std::endl;
+    } else {
+        std::cerr << "Unable to open file: " << filename << std::endl;
+    }
+	return 0;
 }
+
 
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -140,13 +145,6 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 			std::string curl_result = curl_test(real_string);
 			std::vector<std::string> v_append = split_string_to_list(curl_result);
 		
-			for (const auto& i : v_append) {
-				if (i.rfind("|", 0) == 0) {
-					// if the item is not in the list_filter
-					std::cout << *str_value << std::endl;
-					std::cout << "Iteration: " << i << std::endl;
-				}
-			}
 			v = combine_lists(v, v_append);
 		} else {
 			std::cerr << "Error: Array item is not an integer!" << std::endl;
@@ -190,35 +188,34 @@ std::vector<std::string> toml_read_and_sort(toml::table tbl, std::string categor
 
 toml::parse_result get_toml_data()
 {
-    return toml::parse_file("./raw_lists.toml");
+    return toml::parse_file("raw_lists.toml");
 }
 
-std::vector<std::string> update_white_list()
+std::vector<std::string> update_white_list(std::vector<std::string> v_append)
 {
-	std::vector<std::string> v_append = {"google.com", "www.google.com"};
-	combine_lists(white_list, v_append);
+	white_list = combine_lists(white_list, v_append);
 	return white_list;
 }
 
 int main (int argc, char *argv[])
 {
-	white_list = update_white_list();
-	/*
-	// for testing
-	std::string test = clean_up_string("127.0.0.1 0.0.0.0 www.google.com");
-	std::cout << test << std::endl;
-	*/
+	
 	// Start with geting the raw data from toml
 	toml::table tbl = get_toml_data();
+
+	std::future<std::vector<std::string>> get_whitelist = std::async(&toml_read_and_sort, tbl, "Whitelist");
+	std::vector<std::string> result_white = get_whitelist.get();
+	white_list = update_white_list(result_white);
 	std::cout << "Start gathering---------" << std::endl;
+
 	// Go through each main cateory
 	// collecting the data from the links
-	
 	std::future<std::vector<std::string>> get_sus = std::async(&toml_read_and_sort, tbl, "Suspicious");
 	std::future<std::vector<std::string>> get_ads = std::async(&toml_read_and_sort, tbl, "Advertising");
 	std::future<std::vector<std::string>> get_trc = std::async(&toml_read_and_sort, tbl, "Tracking");
 	std::future<std::vector<std::string>> get_mal = std::async(&toml_read_and_sort, tbl, "Malicious");
 	std::future<std::vector<std::string>> get_etc = std::async(&toml_read_and_sort, tbl, "Other");
+
 	// Wait for the result
 	std::cout << "Waiting" << std::endl;
 	std::vector<std::string> result_sus = get_sus.get();
@@ -235,11 +232,32 @@ int main (int argc, char *argv[])
 	full_list = combine_lists(full_list, result_mal);
 	full_list = combine_lists(full_list, result_etc);
 
-	remove_duplicates(full_list);
+	full_list = remove_duplicates(full_list);
 
 	for (auto i = full_list.begin(); i != full_list.end(); ++i) {
 		std::cout << "Iteration: " << *i << std::endl;
 	}
+
+	// Print it to .txt files
+	//writeVectorToFile(myVector, "output.txt");
+	//std::async(&write_vector_to_file, tbl, "Whitelist.txt");
+	std::future<int> wr_wht = std::async(&write_vector_to_file, white_list, "whitelist.txt");
+	std::future<int> wr_sus = std::async(&write_vector_to_file, result_sus, "suspicious.txt");
+	std::future<int> wr_ads = std::async(&write_vector_to_file, result_ads, "advertising.txt");
+	std::future<int> wr_trc = std::async(&write_vector_to_file, result_trc, "tracking.txt");
+	std::future<int> wr_mal = std::async(&write_vector_to_file, result_mal, "malicious.txt");
+	std::future<int> wr_etc = std::async(&write_vector_to_file, result_etc, "other.txt");
+	std::future<int> wr_full = std::async(&write_vector_to_file, full_list, "fulllist.txt");
+
+	int res_w = wr_wht.get();
+	int res_s = wr_sus.get();
+	int res_a = wr_ads.get();
+	int res_t = wr_trc.get();
+	int res_m = wr_mal.get();
+	int res_e = wr_etc.get();
+	int res_f = wr_full.get();
+
+	std::cout << "I finished writing all the files!" << std::endl;
 	
 	return 0;
 }
