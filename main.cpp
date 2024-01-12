@@ -123,11 +123,15 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 		// Skip the string if it starts with "#"
 		// As there is no need for comments
 		if (line.rfind("#", 0) != 0) {
-			std::string clean_uri = clean_up_string(line);
-			// if the item is not in the list_filter
-			if (!check_white_list(clean_uri)) {
-				// add the item
-				result.push_back(clean_uri);
+
+			if (line.rfind("!", 0) != 0) {
+				std::string clean_uri = clean_up_string(line);
+				// if the item is not in the list_filter
+				if (!check_white_list(clean_uri)) {
+					// add the item
+					result.push_back(clean_uri);
+				}
+
 			}
 		}
 		//std::cout << line << std::endl;
@@ -234,9 +238,11 @@ int main (int argc, char *argv[])
 
 	full_list = remove_duplicates(full_list);
 
+	/*
 	for (auto i = full_list.begin(); i != full_list.end(); ++i) {
 		std::cout << "Iteration: " << *i << std::endl;
 	}
+	*/
 
 	// Print it to .txt files
 	//writeVectorToFile(myVector, "output.txt");
