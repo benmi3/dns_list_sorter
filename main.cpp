@@ -57,8 +57,6 @@ std::string curl_test(std::string uri)
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
-
-		//std::cout << readBuffer << std::endl;
 	}
 	return readBuffer;
 }
@@ -110,7 +108,6 @@ bool check_white_list(std::string item)
 		}
 		return true;
 	}
-	// else return false
 	return false;
 }
 
@@ -123,7 +120,7 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 		// Skip the string if it starts with "#"
 		// As there is no need for comments
 		if (line.rfind("#", 0) != 0) {
-
+			// Skip the string if it start with "!"
 			if (line.rfind("!", 0) != 0) {
 				std::string clean_uri = clean_up_string(line);
 				// if the item is not in the list_filter
@@ -134,7 +131,6 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 
 			}
 		}
-		//std::cout << line << std::endl;
 	}
     return result;
 }
@@ -143,7 +139,6 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 	std::vector<std::string> v;
 	for (const auto& item : arr)
 	{
-		// Assuming the array contains integers, change the type accordingly
 		if (auto str_value = item.as_string(); str_value) {
 			std::string real_string = toml_value_to_string(*str_value);
 			std::string curl_result = curl_test(real_string);
@@ -159,11 +154,6 @@ std::vector<std::string> split_string_to_list(const std::string& str)
 
 std::vector<std::string> remove_duplicates(std::vector<std::string> v)
 {
-	//std::set<std::string> string_set;
-	//unsigned size = v.size();
-	//for( unsigned i = 0; i < size; ++i ) string_set.insert( v[i] );
-	//v.assign( string_set.begin(), string_set.end() );
-	//
 	sort( v.begin(), v.end() );
 	v.erase( unique( v.begin(), v.end() ), v.end() );
 
@@ -172,14 +162,11 @@ std::vector<std::string> remove_duplicates(std::vector<std::string> v)
 
 std::vector<std::string> toml_read_and_sort(toml::table tbl, std::string category) 
 {
-	std::vector<std::string> v; // full vector
-	// ---------------------------------------------------------------------
-    // get a toml::node_view of the element 'category' using operator[]
+	std::vector<std::string> v;
     auto category_links = tbl[category]["links"];
 
     const auto& category_links_array = category_links.as_array();
 
-    // Check if 'yourArray' is an array
     if (const auto array_item = category_links_array; array_item) {
         std::vector<std::string> v_append = iterate_array(*array_item, category);
 		v = combine_lists(v, v_append);
@@ -238,15 +225,7 @@ int main (int argc, char *argv[])
 
 	full_list = remove_duplicates(full_list);
 
-	/*
-	for (auto i = full_list.begin(); i != full_list.end(); ++i) {
-		std::cout << "Iteration: " << *i << std::endl;
-	}
-	*/
-
 	// Print it to .txt files
-	//writeVectorToFile(myVector, "output.txt");
-	//std::async(&write_vector_to_file, tbl, "Whitelist.txt");
 	std::future<int> wr_wht = std::async(&write_vector_to_file, white_list, "whitelist.txt");
 	std::future<int> wr_sus = std::async(&write_vector_to_file, result_sus, "suspicious.txt");
 	std::future<int> wr_ads = std::async(&write_vector_to_file, result_ads, "advertising.txt");
