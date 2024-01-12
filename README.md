@@ -2,15 +2,15 @@
 
 pihole_list_sorter_in_cpp
 
-'''shell
+```sh
 curl-config --libs
-'''
+```
 Should respons something like
-'''shell
+```sh
 -lcurl
-'''
+```
 
 
-'''shell
+```sh
 g++ main.cpp -lcurl 
-'''
+```
