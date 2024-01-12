@@ -1,6 +1,6 @@
 # dns_list_sorter
 
-
+## How to do commands in c++?
 ```sh
 curl-config --libs
 ```
