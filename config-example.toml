@@ -1,0 +1,17 @@
+[Whitelist]
+links = ["example.com/whitelist.txt",]
+
+[Suspicious]
+links = ["example.com/suspicious.txt",]
+
+[Advertising]
+links = ["example.com/advertiting.txt",]
+
+[Tracking]
+links = ["example.com/tracking.txt",]
+
+[Malicious]
+links = ["example.com/malicious.txt",]
+
+[Other]
+links = ["example.com/other.txt",]

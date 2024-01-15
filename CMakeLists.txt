@@ -11,6 +11,7 @@ find_package(tomlplusplus REQUIRED)
 
 # Add the source file to the project
 add_executable(dns_list_sorter
+        src/dns_list_sorter.cpp
         src/dns_list_sorter.cpp)
 
 # Link against the libcurl library

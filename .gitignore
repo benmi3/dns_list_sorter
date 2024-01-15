@@ -32,3 +32,5 @@
 *.out
 *.app
 
+# debug
+cmake-build-debug
