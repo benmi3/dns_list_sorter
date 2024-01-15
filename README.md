@@ -25,4 +25,4 @@ run the program
 ./dns_list_sorter
 ```
 ***
-[![License](LICENSE.md)]]
+[![License](LICENSE.md)]
