@@ -193,7 +193,7 @@ std::vector<std::string> toml_read_and_sort(toml::table tbl, std::string categor
 
 toml::parse_result get_toml_data()
 {
-    return toml::parse_file("raw_lists.toml");
+    return toml::parse_file("config.toml");
 }
 
 std::vector<std::string> update_white_list(std::vector<std::string> v_append)
