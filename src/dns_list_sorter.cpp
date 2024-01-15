@@ -9,8 +9,7 @@
 #include <filesystem>
 #include <algorithm>
 #include "curl/curl.h"
-//#include "tomlplusplus/toml.hpp"
-#include "toml++/toml.hpp"
+#include <toml++/toml.hpp>
 // ----------------------------------------- Globals
 std::vector<std::string> white_list;
 std::vector<std::string> full_list;
@@ -191,9 +190,25 @@ std::vector<std::string> toml_read_and_sort(toml::table tbl, std::string categor
 	return sorted_v;
 }
 
-toml::parse_result get_toml_data()
+bool check_if_config_exists(std::string config_file_name)
 {
-    return toml::parse_file("config.toml");
+	std::ifstream config_file;
+
+	config_file.open(config_file_name);
+
+	if (config_file)
+	{
+		return true;
+	}
+	else {
+		return false;
+	}
+
+}
+
+toml::parse_result get_toml_data(std::string config_file_name)
+{
+	return toml::parse_file(config_file_name);
 }
 
 std::vector<std::string> update_white_list(std::vector<std::string> v_append)
@@ -204,9 +219,16 @@ std::vector<std::string> update_white_list(std::vector<std::string> v_append)
 
 int main (int argc, char *argv[])
 {
-	
+
+	std::string config_file_name = "config.toml";
+
+	if (check_if_config_exists(config_file_name) != true) {
+		std::cout << "Could not fine config.toml" << std::endl;
+		std::cout << "Exiting program" << std::endl;
+		std::exit(1);
+	};
 	// Start with geting the raw data from toml
-	toml::table tbl = get_toml_data();
+	toml::table tbl = get_toml_data(config_file_name);
 
 	std::future<std::vector<std::string>> get_whitelist = std::async(&toml_read_and_sort, tbl, "Whitelist");
 	std::vector<std::string> result_white = get_whitelist.get();
