@@ -25,4 +25,6 @@ run the program
 ./dns_list_sorter
 ```
 ***
+*PS: I will leave my config up as long is it does not create any problems. Please let me know if it creates any problems, and I will remove it.*
+***
 [![License](LICENSE.md)]
